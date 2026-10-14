@@ -3,36 +3,435 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Простыми словами — бот, который объясняет понятно</title>
-  <meta name="description" content="Telegram-бот «Простыми словами» объясняет сложное простыми словами, так, чтобы понял ребёнок. Пришлите фото или текст задания и получите понятный разбор.">
-  <meta name="robots" content="noindex"><!-- временная страница: убрать, когда сайт будет готов -->
-  <link rel="icon" href="logo.jpg">
+  <title>Простыми словами: бот, который объясняет задания так, чтобы понял ребёнок</title>
+  <meta name="description" content="Telegram-бот «Простыми словами» ведёт ребёнка к ответу вопросами. Пришлите фото или текст задания и получите разбор, который можно пересказать. Три запроса бесплатно.">
+  <link rel="icon" href="img/day-96.webp" type="image/webp">
+  <link rel="preload" href="fonts/onest.woff2" as="font" type="font/woff2" crossorigin>
   <style>
-    :root { --bg:#fff9ec; --text:#1f2430; --muted:#5b6270; --accent:#2f6fe4; --line:#eadfc6; }
-    @media (prefers-color-scheme: dark) { :root { --bg:#14161c; --text:#e9ebf0; --muted:#9aa1b0; --accent:#6c9bff; --line:#2b2f3a; } }
+    @font-face { font-family: "Onest"; src: url("fonts/onest.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+
+    :root {
+      --bg: #F8FAFC; --surface: #FFFFFF; --surface-2: #F1F5F9;
+      --text: #0F172A; --muted: #475569; --subtle: #64748B;
+      --primary: #4F46E5; /* taste-skill-ignore: цвет из схемы пользователя */ --primary-hover: #4338CA; --primary-soft: #EEF2FF; --on-primary: #FFFFFF;
+      --accent: #F59E0B; --on-accent: #1A1203;
+      --success: #15803D;
+      --r: 22px;
+      --pad: 40px;
+      --step-small: clamp(0.875rem, 0.85rem + 0.1vw, 0.9375rem);
+      --step-body: clamp(1.0625rem, 1rem + 0.25vw, 1.1875rem);
+      --step-lead: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
+      --step-head: clamp(2rem, 1.3rem + 3.2vw, 4rem);
+      --step-display: clamp(2.25rem, 1.2rem + 4.6vw, 5rem);
+    }
+    [data-theme="dark"] {
+      --bg: #0B1120; --surface: #111827; --surface-2: #1E293B;
+      --text: #F8FAFC; --muted: #CBD5E1; --subtle: #94A3B8;
+      --primary: #818CF8; /* taste-skill-ignore */ --primary-hover: #A5B4FC; --primary-soft: #1E1B4B; --on-primary: #0B1120;
+      --accent: #FBBF24; --on-accent: #1A1203; --success: #4ADE80;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #0B1120; --surface: #111827; --surface-2: #1E293B;
+        --text: #F8FAFC; --muted: #CBD5E1; --subtle: #94A3B8;
+        --primary: #818CF8; /* taste-skill-ignore */ --primary-hover: #A5B4FC; --primary-soft: #1E1B4B; --on-primary: #0B1120;
+        --accent: #FBBF24; --on-accent: #1A1203; --success: #4ADE80;
+      }
+    }
+    .logo-night { display: none; }
+    [data-theme="dark"] .logo-day { display: none; } [data-theme="dark"] .logo-night { display: inline-block; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) .logo-day { display: none; }
+      :root:not([data-theme="light"]) .logo-night { display: inline-block; }
+    }
+
     * { box-sizing: border-box; }
-    body { margin:0; background:var(--bg); color:var(--text); font:18px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; }
-    main { max-width:640px; margin:0 auto; padding:72px 20px 40px; text-align:center; }
-    img { width:96px; height:96px; border-radius:24px; }
-    h1 { font-size:clamp(30px,6vw,44px); line-height:1.15; margin:20px 0 12px; }
-    p { margin:0 0 16px; color:var(--muted); }
-    .btn { display:inline-block; background:var(--accent); color:#fff; padding:14px 28px; border-radius:999px; font-weight:600; text-decoration:none; margin:12px 0 8px; }
-    footer { max-width:640px; margin:0 auto; padding:24px 20px 48px; text-align:center; font-size:14px; color:var(--muted); border-top:1px solid var(--line); }
-    footer a { color:var(--muted); margin:0 8px; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 400 var(--step-body)/1.55 "Onest", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+           -webkit-font-smoothing: antialiased; }
+    img { display: block; max-width: 100%; }
+    a { color: inherit; }
+    h1, h2, h3, p { margin: 0; }
+    h1, h2, h3 { font-weight: 600; letter-spacing: -0.035em; line-height: 1.02; }
+    :focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; border-radius: 8px; }
+    ::selection { background: var(--primary); color: var(--on-primary); }
+    .wrap { padding-inline: var(--pad); max-width: 1440px; margin-inline: auto; }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 56px; padding: 0 28px; border-radius: var(--r);
+           background: var(--primary); color: var(--on-primary); font: 600 1.0625rem/1 inherit; text-decoration: none; border: 0; cursor: pointer;
+           transition: background .2s, transform .15s; }
+    .btn:hover { background: var(--primary-hover); }
+    .btn:active { transform: translateY(2px); }
+
+    .bar { background: var(--bg); position: sticky; top: 0; z-index: 20; }
+    .bar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 76px; }
+    .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; font-weight: 600; font-size: 1.125rem; letter-spacing: -0.02em; }
+    .brand img { width: 40px; height: 40px; border-radius: 12px; }
+    nav { display: flex; align-items: center; gap: 28px; }
+    nav a.link { text-decoration: none; color: var(--muted); font-size: var(--step-small); font-weight: 500; padding: 8px 0; }
+    nav a.link:hover { color: var(--text); }
+    nav .btn { min-height: 46px; padding: 0 20px; }
+    @media (max-width: 860px) { :root { --pad: 20px; } nav a.link { display: none; } nav { gap: 10px; } .theme::before { content: none; } .theme, nav .btn { padding: 0 14px; } }
+
+    .hero { position: relative; overflow: hidden; }
+    .hero .copy { position: relative; z-index: 2; padding-top: 70px; }
+    .hero h1 { font-size: var(--step-display); max-width: 18ch; }
+    .hero .lead { margin-top: 22px; max-width: 34ch; font-size: var(--step-lead); line-height: 1.3; color: var(--muted); }
+    .hero .go { margin-top: 30px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+    .hero .go span { color: var(--muted); font-size: var(--step-small); }
+    .stage { position: relative; margin: 56px 0 0 41.6%; padding: clamp(32px, 4vw, 60px) clamp(24px, 4vw, 64px) clamp(36px, 4vw, 64px); background: var(--primary);
+             border-top-left-radius: clamp(90px, 13vw, 210px); display: flex; align-items: flex-start; gap: clamp(20px, 3vw, 48px); }
+    .stage .ui { flex: 1 1 0; min-width: 0; max-width: 500px; }
+    .stage .mark { flex: 0 0 auto; width: clamp(150px, 20vw, 300px); aspect-ratio: 1; border-radius: 22%; object-fit: cover; margin-left: auto; }
+    @media (max-width: 860px) {
+      .hero { min-height: 0; }
+      .hero .copy { padding-top: 40px; }
+      .stage { margin: 44px 0 0; padding: 28px 20px 40px; border-top-left-radius: 96px; display: grid; gap: 22px; }
+      .stage .ui { max-width: none; }
+      .stage .mark { width: 54%; justify-self: end; margin-left: 0; }
+    }
+
+    .ui { background: var(--surface); color: var(--text); border-radius: var(--r); overflow: hidden; font-size: 1rem; line-height: 1.4; }
+    .ui .top { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: var(--surface-2); font-weight: 600; }
+    .ui .top img { width: 32px; height: 32px; border-radius: 10px; }
+    .ui .top small { font-weight: 400; color: var(--muted); margin-left: auto; font-size: 0.875rem; }
+    .ui .msgs { padding: 14px; display: grid; gap: 8px; }
+    .bub { padding: 10px 14px; border-radius: 18px; background: var(--surface-2); max-width: 94%; }
+    .bub b { display: block; font-size: 0.8125rem; font-weight: 600; color: var(--muted); margin-bottom: 2px; }
+    .ui[data-ui]::after { content: "Пример: реальный ответ бота может отличаться."; display: block; padding: 0 16px 14px; font-size: 0.8125rem; color: var(--muted); }
+    .bub.bot { max-width: 100%; }
+    .sec { margin: 8px 0 0; } .sec i { display: block; font-style: normal; font-size: 0.8125rem; font-weight: 600; color: var(--muted); }
+    .bub.me { background: var(--primary-soft); justify-self: end; }
+    .bub.kid { background: var(--accent); color: var(--on-accent); justify-self: end; }
+    .bub.kid b { color: var(--on-accent); }
+    .bub.ok { background: var(--success); color: #fff; }
+    .bub.ok b { color: #fff; }
+
+    section { padding-block: clamp(80px, 11vw, 190px); }
+    .head { font-size: var(--step-head); max-width: 16ch; }
+    .sub { margin-top: 18px; max-width: 46ch; color: var(--muted); font-size: var(--step-lead); line-height: 1.3; }
+
+    .how { padding: 0; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; min-height: min(94svh, 880px); position: relative; }
+    .split .left { background: var(--surface-2); padding: 56px var(--pad) 160px; display: flex; flex-direction: column; justify-content: flex-start; }
+    .split .right { background: var(--primary-soft); padding: 56px var(--pad) 160px; display: grid; place-items: center; }
+    .split h2 { font-size: clamp(2.5rem, 1.6rem + 3.8vw, 4.75rem); max-width: 10ch; margin-top: 14px; min-height: 2.1em; }
+    .split .left p { margin-top: 22px; color: var(--muted); max-width: 30ch; }
+    .split .ui { width: min(440px, 100%); }
+    .js .frag { display: none; } .js .frag.on { display: block; }
+    .frag + .frag { margin-top: 22px; } .js .frag + .frag { margin-top: 0; }
+    .ctrl { position: absolute; left: var(--pad); right: var(--pad); bottom: 28px; }
+    .rail { position: relative; height: 8px; border-radius: 4px; background: var(--bg); }
+    .rail .fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--text); border-radius: 4px; transition: width .25s; }
+    .rail input { position: absolute; inset: -12px 0; width: 100%; height: 32px; margin: 0; opacity: 0; cursor: pointer; }
+    .rail .thumb { position: absolute; top: 50%; width: 32px; height: 32px; margin: -16px 0 0 -16px; border-radius: 10px; background: var(--accent); transition: left .25s; pointer-events: none; }
+    .rail:focus-within .thumb { outline: 3px solid var(--primary); outline-offset: 3px; }
+    .stops { display: flex; justify-content: space-between; margin-top: 22px; gap: 8px; }
+    .stops button { background: none; border: 0; padding: 6px 0; font: 500 var(--step-small)/1.2 inherit; color: var(--muted); cursor: pointer; text-align: left; }
+    .stops button[aria-current="true"] { color: var(--text); font-weight: 600; }
+    @media (max-width: 860px) {
+      .split { grid-template-columns: 1fr; min-height: 0; }
+      .split .right { order: -1; padding-bottom: 36px; }
+      .split .left { padding-bottom: 150px; }
+      .split h2 { min-height: 0; }
+      .ctrl { bottom: 20px; }
+    }
+
+    .show { background: var(--bg); padding-bottom: clamp(20px, 3vw, 40px); }
+    .show .grid { display: grid; grid-template-columns: 1fr minmax(320px, 0.9fr); gap: clamp(32px, 6vw, 110px); align-items: center; }
+    .names { list-style: none; margin: 34px 0 0; padding: 0; display: grid; gap: 4px; }
+    .names button { background: none; border: 0; padding: 4px 0; font: 600 clamp(1.75rem, 1.2rem + 2vw, 2.75rem)/1.15 inherit; letter-spacing: -0.03em;
+                    color: var(--muted); cursor: pointer; text-align: left; }
+    .names button[aria-pressed="true"] { color: var(--text); }
+    .names button:hover { color: var(--text); }
+    .fact { margin-top: 26px; max-width: 40ch; color: var(--muted); min-height: 3.2em; }
+    .disc { position: relative; width: min(100%, 560px); aspect-ratio: 1; border-radius: 22%; background: var(--primary); overflow: hidden; justify-self: center;
+            transition: background .3s; }
+    .disc img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .3s; }
+    .disc img.on { opacity: 1; }
+    .disc .ui { position: absolute; left: 8%; right: 8%; bottom: 8%; }
+    .disc .ui .msgs { padding: 12px; }
+    @media (max-width: 860px) { .show .grid { grid-template-columns: 1fr; } .disc { order: -1; width: 86%; } }
+
+    .price { padding: 0; }
+    .price .intro { padding-block: clamp(36px, 5vw, 70px) 40px; }
+    .fields { display: grid; grid-template-columns: 5fr 7fr; }
+    .field { min-height: min(84svh, 760px); padding: 40px var(--pad) 44px; display: flex; flex-direction: column; }
+    .field.a { background: var(--accent); color: var(--on-accent); }
+    .field.b { background: var(--primary); color: var(--on-primary); }
+    .field h3 { font-size: clamp(2.25rem, 1.4rem + 3.4vw, 4.5rem); }
+    .field .who { margin-top: 16px; max-width: 26ch; font-size: var(--step-lead); line-height: 1.3; }
+    .field .inc { margin-top: 22px; max-width: 38ch; }
+    .field .foot { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 40px; }
+    .field .cost { font-size: clamp(3.5rem, 2rem + 6.5vw, 8rem); font-weight: 600; letter-spacing: -0.045em; line-height: 0.9; }
+    .field .cost small { display: block; font-size: var(--step-body); font-weight: 400; letter-spacing: 0; margin-top: 14px; }
+    .field.a .btn { background: var(--on-accent); color: var(--accent); }
+    .field.b .btn { background: var(--surface); color: var(--text); }
+    @media (max-width: 860px) { .fields { grid-template-columns: 1fr; } .field { min-height: 0; } .field .foot .btn { width: 100%; } }
+
+    .facts { background: var(--bg); }
+    .board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+    .tile { border-radius: var(--r); padding: 24px; aspect-ratio: 3 / 2; background: var(--surface-2); display: flex; flex-direction: column; gap: 10px; }
+    .tile:nth-child(even) { background: var(--primary-soft); }
+    .tile h3 { font-size: clamp(1.375rem, 1.1rem + 1vw, 1.875rem); letter-spacing: -0.025em; line-height: 1.08; }
+    .tile p { font-size: var(--step-small); color: var(--muted); margin-top: auto; }
+    .tile.big { grid-column: span 2; background: var(--accent); color: var(--on-accent); }
+    .tile.big h3 { font-size: var(--step-head); }
+    @media (max-width: 860px) { .board { grid-template-columns: 1fr 1fr; gap: 6px; } .tile.big { grid-column: 1 / -1; aspect-ratio: auto; min-height: 150px; } .tile { aspect-ratio: auto; min-height: 160px; padding: 18px; } }
+    @media (max-width: 520px) { .board { grid-template-columns: 1fr; } .tile { min-height: 0; } }
+
+    .faq { padding-top: clamp(24px, 4vw, 60px); }
+    .facts { padding-bottom: clamp(24px, 4vw, 60px); }
+    .faq .stack { margin: 70px auto 0; max-width: 880px; }
+    details.card { position: relative; background: var(--surface-2); border-radius: var(--r); margin-top: -30px; padding-bottom: 6px; }
+    details.card:first-child { margin-top: 0; }
+    details.card:nth-child(3n+2) { background: var(--primary-soft); }
+    details.card:nth-child(3n) { background: var(--surface); }
+    details.card::before { content: attr(data-topic); position: absolute; top: -38px; left: calc(var(--i) * 112px + 24px); width: 190px; height: 40px;
+                           border-radius: 16px 16px 0 0; background: inherit; padding: 9px 18px; font-size: var(--step-small); font-weight: 600; color: var(--muted); }
+    details.card summary { list-style: none; cursor: pointer; padding: 28px 28px 22px; min-height: 96px; font-weight: 500; font-size: 1.25rem; line-height: 1.3; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    details.card summary::-webkit-details-marker { display: none; }
+    details.card summary::after { content: "+"; font-size: 1.75rem; line-height: 1; color: var(--primary); }
+    details.card[open] summary::after { content: "−"; }
+    details.card .ans { padding: 0 28px 72px; max-width: 54ch; color: var(--muted); }
+    @media (max-width: 860px) { details.card::before { width: 130px; left: calc(var(--i) * 44px + 16px); } details.card summary { padding: 24px 20px 18px; font-size: 1.125rem; } details.card .ans { padding: 0 20px 48px; } }
+
+    .close { padding-block: clamp(60px, 8vw, 130px); overflow: hidden; }
+    .row { padding-inline: var(--pad); max-width: 1440px; margin-inline: auto; }
+    .row .side { border-radius: var(--r); overflow: hidden; min-height: 360px; position: relative; background: var(--surface-2); }
+    .row .side img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: drift 26s ease-in-out infinite alternate; }
+    .row .center { border-radius: var(--r); background: var(--accent); color: var(--on-accent); padding: 44px; min-height: 360px; display: flex; flex-direction: column; justify-content: center; gap: 18px; }
+    .row .center h2 { font-size: var(--step-head); max-width: 14ch; }
+    .row .center p { max-width: 36ch; }
+    .row .center .btn { align-self: flex-start; background: var(--on-accent); color: var(--accent); margin-top: 8px; }
+    @keyframes drift { from { transform: scale(1.02); } to { transform: scale(1.1) translateX(-1.5%); } }
+    @media (max-width: 860px) { .row { grid-template-columns: 1fr 1fr; margin-inline: 0; } .row .center { grid-column: 1 / -1; order: -1; padding: 28px 22px; } .row .side { min-height: 130px; } }
+
+    footer { padding-bottom: 48px; }
+    .blocks { display: flex; gap: 4px; align-items: flex-end; height: min(34svh, 300px); margin-top: 24px; }
+    .blocks span { flex: 1; display: grid; place-items: center; border-radius: 10px; font-weight: 700; font-size: clamp(0.8rem, 0.2rem + 3.4vw, 5.2rem); line-height: 1;
+                   color: var(--bg); letter-spacing: -0.02em; }
+    .blocks .gap { flex: 0 0 clamp(8px, 2vw, 28px); background: none; }
+    .blocks span.c1 { background: var(--primary); } .blocks span.c2 { background: var(--accent); color: var(--on-accent); } .blocks span.c3 { background: var(--text); }
+    .links { display: grid; grid-template-columns: repeat(12, 1fr); gap: 20px; margin-top: 56px; font-size: var(--step-small); }
+    .links nav { grid-column: span 8; display: flex; flex-wrap: wrap; gap: 14px 32px; }
+    .links nav a { color: var(--text); }
+    .links .who { grid-column: span 4; color: var(--muted); }
+    .small { margin-top: 40px; color: var(--muted); font-size: var(--step-small); max-width: 90ch; display: grid; gap: 10px; }
+    .small a { color: var(--text); }
+    .theme { background: var(--surface-2); border: 0; color: var(--text); font: 500 var(--step-small)/1 inherit; cursor: pointer; min-height: 46px; padding: 0 16px; border-radius: var(--r); transition: background .2s; }
+    .theme:hover { background: var(--primary-soft); }
+    .theme::before { content: "Тема: "; color: var(--muted); }
+    @media (max-width: 860px) { .links nav, .links .who { grid-column: 1 / -1; } }
+
+    .js .rv { opacity: 0; transform: translateY(24px); transition: opacity .6s ease, transform .6s ease; transition-delay: var(--d, 0ms); }
+    .js .rv.in { opacity: 1; transform: none; }
+    @keyframes shutter { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0 0 0 0); } }
+    @keyframes settle { from { transform: scale(1.12); } to { transform: none; } }
+    .js .stage { animation: shutter 1.1s cubic-bezier(.2, .7, .2, 1) both; }
+    .js .stage .ui, .js .stage .mark { animation: settle 1.3s cubic-bezier(.2, .7, .2, 1) both; }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .js .rv { opacity: 1; transform: none; transition: none; }
+      .js .stage, .js .stage .ui, .js .stage .mark, .row .side img { animation: none; }
+      * { transition-duration: 0s !important; }
+    }
   </style>
+  <script>document.documentElement.classList.add("js");</script>
 </head>
 <body>
-  <main>
-    <img src="logo.jpg" alt="Простыми словами">
-    <h1>Простыми словами</h1>
-    <p>Бот в Telegram, который объясняет сложное простыми словами, так, чтобы понял даже ребёнок. Пришлите фото или текст задания и получите разбор, который можно пересказать малышу.</p>
-    <a class="btn" href="https://t.me/prostymy_slovamy_bot">Открыть бота</a>
-    <p>3 запроса бесплатно.</p>
+  <header class="bar">
+    <div class="wrap">
+      <a class="brand" href="#top"><img class="logo-day" src="img/day-96.webp" alt="" width="40" height="40"><img class="logo-night" src="img/night-96.webp" alt="" width="40" height="40"><span>Простыми словами</span></a>
+      <nav aria-label="Разделы">
+        <a class="link" href="#how">Как это работает</a>
+        <a class="link" href="#show">Что прислать</a>
+        <a class="link" href="#price">Тарифы</a>
+        <a class="link" href="#faq">Вопросы</a>
+        <button class="theme" id="theme" type="button" aria-label="Тема: авто">авто</button>
+        <a class="btn" href="https://t.me/prostymy_slovamy_bot">Открыть бота</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <div class="hero">
+      <div class="wrap copy">
+        <h1>Объясним сложное простыми словами</h1>
+        <p class="lead">Пришлите в Telegram фото или текст задания и получите разбор, который можно пересказать ребёнку.</p>
+        <div class="go"><a class="btn" href="https://t.me/prostymy_slovamy_bot">Открыть бота</a><span>Первые три запроса бесплатно</span></div>
+      </div>
+      <div class="stage">
+        <div class="ui" data-ui><div class="top"><img class="logo-day" src="img/day-96.webp" alt="" width="32" height="32"><img class="logo-night" src="img/night-96.webp" alt="" width="32" height="32">Простыми словами<small>бот</small></div><div class="msgs"><div class="bub me"><b>Задание</b>Масса полного бочонка с мёдом 17 кг, а наполовину заполненного 9 кг. Какова масса пустого бочонка?</div><div class="bub bot"><b>Бот</b><p class="sec"><i>Что нужно найти</i>Массу пустого бочонка.</p><p class="sec"><i>Спросите ребёнка</i>«На сколько килограммов полный бочонок тяжелее половинного?»</p><p class="sec"><i>Ребёнок может ответить</i>«На 8 кг».</p></div></div></div>
+        <img class="mark logo-day" src="img/day-960.webp" alt="Логотип «Простыми словами»: лампочка над раскрытой книгой" width="330" height="330">
+        <img class="mark logo-night" src="img/night-960.webp" alt="Логотип «Простыми словами»: лампочка над раскрытой книгой" width="330" height="330">
+      </div>
+    </div>
+
+    <section class="how" id="how" aria-labelledby="clause">
+      <div class="split">
+        <div class="left">
+          <p class="sub rv" style="margin:0;color:var(--muted)">Так проходит разбор: потяните ползунок.</p>
+          <h2 id="clause" aria-live="polite">Присылаете задание</h2>
+          <p id="note">Фото страницы или обычный текст. Ничего устанавливать не нужно.</p>
+        </div>
+        <div class="right">
+          <div class="frag on" data-clause="Присылаете задание" data-note="Фото страницы или обычный текст. Ничего устанавливать не нужно."><div class="ui" data-ui><div class="top"><img class="logo-day" src="img/day-96.webp" alt="" width="32" height="32"><img class="logo-night" src="img/night-96.webp" alt="" width="32" height="32">Простыми словами<small>бот</small></div><div class="msgs"><div class="bub me"><b>Задание</b>Масса полного бочонка с мёдом 17 кг, а наполовину заполненного 9 кг. Какова масса пустого бочонка?</div></div></div></div>
+          <div class="frag" data-clause="Бот начинает разбор" data-note="Сначала что нужно найти и с чего начать. Иногда бот вместо подсказок сразу объясняет решение целиком."><div class="ui" data-ui><div class="top"><img class="logo-day" src="img/day-96.webp" alt="" width="32" height="32"><img class="logo-night" src="img/night-96.webp" alt="" width="32" height="32">Простыми словами<small>бот</small></div><div class="msgs"><div class="bub me"><b>Задание</b>Масса полного бочонка с мёдом 17 кг, а наполовину заполненного 9 кг. Какова масса пустого бочонка?</div><div class="bub bot"><b>Бот</b><p class="sec"><i>Что нужно найти</i>Массу пустого бочонка.</p><p class="sec"><i>Спросите ребёнка</i>«На сколько килограммов полный бочонок тяжелее половинного?»</p><p class="sec"><i>Ребёнок может ответить</i>«На 8 кг».</p></div></div></div></div>
+          <div class="frag" data-clause="Разбор продолжается" data-note="Следующая часть опирается на ответ ребёнка. Всё приходит в одном сообщении."><div class="ui" data-ui><div class="top"><img class="logo-day" src="img/day-96.webp" alt="" width="32" height="32"><img class="logo-night" src="img/night-96.webp" alt="" width="32" height="32">Простыми словами<small>бот</small></div><div class="msgs"><div class="bub me"><b>Задание</b>Масса полного бочонка с мёдом 17 кг, а наполовину заполненного 9 кг. Какова масса пустого бочонка?</div><div class="bub bot"><b>Бот</b><p class="sec"><i>Что нужно найти</i>Массу пустого бочонка.</p><p class="sec"><i>Спросите ребёнка</i>«На сколько килограммов полный бочонок тяжелее половинного?»</p><p class="sec"><i>Ребёнок может ответить</i>«На 8 кг».</p><p class="sec"><i>Что это значит</i>Эти 8 кг и есть половина мёда. Спросите: «Сколько тогда весит весь мёд?»</p><p class="sec"><i>Ребёнок может ответить</i>«16 кг».</p></div></div></div></div>
+          <div class="frag" data-clause="Ответ и итог" data-note="Бот называет ответ задачи и помогает проверить его вместе с ребёнком."><div class="ui" data-ui><div class="top"><img class="logo-day" src="img/day-96.webp" alt="" width="32" height="32"><img class="logo-night" src="img/night-96.webp" alt="" width="32" height="32">Простыми словами<small>бот</small></div><div class="msgs"><div class="bub me"><b>Задание</b>Масса полного бочонка с мёдом 17 кг, а наполовину заполненного 9 кг. Какова масса пустого бочонка?</div><div class="bub bot"><b>Бот</b><p class="sec"><i>Что нужно найти</i>Массу пустого бочонка.</p><p class="sec"><i>Спросите ребёнка</i>«На сколько килограммов полный бочонок тяжелее половинного?»</p><p class="sec"><i>Ребёнок может ответить</i>«На 8 кг».</p><p class="sec"><i>Что это значит</i>Эти 8 кг и есть половина мёда. Спросите: «Сколько тогда весит весь мёд?»</p><p class="sec"><i>Ребёнок может ответить</i>«16 кг».</p><p class="sec"><i>Ответ</i>17 − 16 = 1 кг.</p><p class="sec"><i>Проверка</i>Бочонок 1 кг и половина мёда 8 кг вместе дают 9 кг. Сходится.</p><p class="sec"><i>Итог</i>Ребёнок сам нашёл ответ.</p></div></div></div></div>
+        </div>
+        <div class="ctrl" aria-label="Шаги разбора">
+          <div class="rail"><div class="fill"></div><input type="range" id="stage" min="0" max="3" step="1" value="0" aria-label="Шаг разбора" aria-valuetext="Присылаете задание"><div class="thumb"></div></div>
+          <div class="stops"><button type="button" data-i="0" aria-current="true">Запрос</button><button type="button" data-i="1">Начало</button><button type="button" data-i="2">Продолжение</button><button type="button" data-i="3">Ответ</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="show" id="show">
+      <div class="wrap grid">
+        <div>
+          <h2 class="head rv">Что можно прислать</h2>
+          <ul class="names rv" style="--d:80ms">
+            <li><button type="button" data-i="0" aria-pressed="true">Задачу по математике</button></li>
+            <li><button type="button" data-i="1" aria-pressed="false">Правило по русскому</button></li>
+            <li><button type="button" data-i="2" aria-pressed="false">Текст для чтения</button></li>
+            <li><button type="button" data-i="3" aria-pressed="false">Вопрос «почему?»</button></li>
+          </ul>
+          <p class="fact rv" id="fact" style="--d:140ms">Бот ведёт к ответу вопросами и не решает за ребёнка.</p>
+        </div>
+        <div class="disc rv" id="disc" style="--d:120ms">
+          <img class="on logo-day" src="img/day-960.webp" alt="Логотип «Простыми словами»: лампочка над раскрытой книгой" width="700" height="700" loading="lazy">
+          <img class="on logo-night" src="img/night-960.webp" alt="Логотип «Простыми словами»: лампочка над раскрытой книгой" width="700" height="700" loading="lazy">
+          <div class="ui" data-ui><div class="msgs" id="discmsg"><div class="bub bot"><b>Бот</b>Что нужно найти: массу пустого бочонка. Спросите ребёнка, на сколько полный бочонок тяжелее половинного.</div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="price" id="price">
+      <div class="wrap intro">
+        <h2 class="head rv">Три запроса бесплатно</h2>
+        <p class="sub rv" style="--d:80ms">Дальше выбираете сами. Автопродления нет: оплатили один раз и пользуетесь.</p>
+      </div>
+      <div class="fields">
+        <div class="field a">
+          <h3>Пакет</h3>
+          <p class="who">Для тех, кто спрашивает время от времени.</p>
+          <p class="inc">Запросы не сгорают: потратите за неделю или за год. Оплатить можно через СБП, картой или T-Pay.</p>
+          <div class="foot"><div class="cost">99 ₽<small>30 запросов, без срока</small></div><a class="btn" href="https://t.me/prostymy_slovamy_bot">Купить в боте</a></div>
+        </div>
+        <div class="field b">
+          <h3>Месяц</h3>
+          <p class="who">Для тех, кто занимается каждый день.</p>
+          <p class="inc">Перед окончанием бот напомнит о продлении. Если продлить заранее, неиспользованные запросы сохранятся. Автосписаний нет.</p>
+          <div class="foot"><div class="cost">199 ₽<small>100 запросов, 30 дней</small></div><a class="btn" href="https://t.me/prostymy_slovamy_bot">Оформить в боте</a></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="facts">
+      <div class="wrap">
+        <div class="board">
+          <div class="tile big rv"><h3>Честно о главном</h3></div>
+          <div class="tile rv" style="--d:60ms"><h3>Фото не сохраняются</h3><p>Бот обрабатывает снимок и сразу забывает его.</p></div>
+          <div class="tile rv" style="--d:120ms"><h3>Оплата через ЮKassa</h3><p>СБП, T-Pay, SberPay или карта на странице платежа.</p></div>
+          <div class="tile rv" style="--d:60ms"><h3>Чек в Telegram</h3><p>Чек самозанятого приходит в чат после оплаты.</p></div>
+          <div class="tile rv" style="--d:120ms"><h3>Данные в России</h3><p>База хранится на российском сервере.</p></div>
+          <div class="tile rv" style="--d:180ms"><h3>ИИ может ошибаться</h3><p>Бот не заменяет учителя, врача и юриста.</p></div>
+          <div class="tile rv" style="--d:240ms"><h3>Возврат по запросу</h3><p>Условия описаны в документе «Условия возврата».</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="faq" id="faq">
+      <div class="wrap">
+        <h2 class="head rv" style="margin-inline:auto;max-width:880px;text-align:left">Вопросы и ответы</h2>
+        <div class="stack">
+          <details class="card" data-topic="Что присылать" style="--i:0" name="faq" open><summary>Что можно прислать боту?</summary><p class="ans">Фото страницы учебника или тетради либо обычный текст: задачу, правило, вопрос ребёнка. Текст принимается до 500 знаков, для длинных заданий лучше фото.</p></details>
+          <details class="card" data-topic="Ошибки" style="--i:1" name="faq"><summary>А если бот ошибся?</summary><p class="ans">Искусственный интеллект может ошибаться. Проверьте разбор сами и задайте вопрос иначе. Если что-то пошло не так, напишите в техподдержку прямо в боте.</p></details>
+          <details class="card" data-topic="Оплата" style="--i:2" name="faq"><summary>Как платить?</summary><p class="ans">Кнопка «Купить» в боте открывает страницу ЮKassa: СБП, T-Pay, SberPay или карта. Подтверждение приходит в чат автоматически.</p></details>
+          <details class="card" data-topic="Возврат" style="--i:3" name="faq"><summary>Как вернуть деньги?</summary><p class="ans">Напишите в техподдержку в боте. Условия описаны в документе «Условия возврата», обращение рассматривается в течение трёх рабочих дней.</p></details>
+          <details class="card" data-topic="Данные" style="--i:4" name="faq"><summary>Что происходит с моими данными?</summary><p class="ans">Фото не сохраняются, текст запросов не хранится. Подробности в политике обработки данных.</p></details>
+          <details class="card" data-topic="Установка" style="--i:5" name="faq"><summary>Нужно ли что-то устанавливать?</summary><p class="ans">Нет. Бот работает прямо в Telegram, достаточно нажать «Открыть бота».</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="close">
+      <div class="row"><div class="center rv"><h2>Откройте бота</h2><p>Первые три запроса бесплатно, карта не нужна.</p><a class="btn" href="https://t.me/prostymy_slovamy_bot">Открыть в Telegram</a></div></div>
+    </section>
   </main>
+
   <footer>
-    <a href="https://chasovoy.pro/psl-legal/offer/">Оферта</a>
-    <a href="https://chasovoy.pro/psl-legal/refund/">Условия возврата</a>
-    <a href="https://chasovoy.pro/psl-legal/policy/">Политика данных</a>
+    <div class="wrap">
+      <div class="blocks" aria-label="Простыми словами">
+        <span class="c1" style="height:78%">П</span><span class="c2" style="height:100%">Р</span><span class="c3" style="height:86%">О</span><span class="c1" style="height:94%">С</span>
+        <span class="c2" style="height:70%">Т</span><span class="c3" style="height:100%">Ы</span><span class="c1" style="height:82%">М</span><span class="c2" style="height:92%">И</span>
+        <span class="gap"></span>
+        <span class="c3" style="height:90%">С</span><span class="c1" style="height:100%">Л</span><span class="c2" style="height:76%">О</span><span class="c3" style="height:96%">В</span>
+        <span class="c1" style="height:84%">А</span><span class="c2" style="height:100%">М</span><span class="c3" style="height:72%">И</span>
+      </div>
+      <div class="links">
+        <nav aria-label="Документы">
+          <a href="https://chasovoy.pro/psl-legal/offer/">Оферта</a>
+          <a href="https://chasovoy.pro/psl-legal/refund/">Условия возврата</a>
+          <a href="https://chasovoy.pro/psl-legal/policy/">Политика данных</a>
+          <a href="https://t.me/prostymy_slovamy_bot">Бот в Telegram</a>
+        </nav>
+        <div class="who">Техподдержка: кнопка «Техподдержка» в боте или <a href="mailto:16-salable-via@icloud.com">16-salable-via@icloud.com</a></div>
+      </div>
+      <div class="small">
+        <p>Исполнитель: Сецкий Иван Васильевич, ИНН 511201570210, самозанятый (плательщик НПД).</p>
+      </div>
+    </div>
   </footer>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var btn = document.getElementById("theme"), modes = ["auto", "light", "dark"], names = {auto: "авто", light: "светлая", dark: "тёмная"};
+      var mode = new URLSearchParams(location.search).get("theme") || "auto";
+      function applyTheme() { if (mode === "auto") root.removeAttribute("data-theme"); else root.setAttribute("data-theme", mode); btn.textContent = names[mode]; btn.setAttribute("aria-label", "Тема: " + names[mode] + ", нажмите, чтобы переключить"); }
+      btn.onclick = function () { mode = modes[(modes.indexOf(mode) + 1) % 3]; applyTheme(); };
+      applyTheme();
+
+      var items = document.querySelectorAll(".rv");
+      if ("IntersectionObserver" in window) {
+        var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }); }, {threshold: 0.15});
+        items.forEach(function (el) { io.observe(el); });
+      } else { items.forEach(function (el) { el.classList.add("in"); }); }
+
+      var frags = document.querySelectorAll(".frag"), rng = document.getElementById("stage"), fill = document.querySelector(".rail .fill"),
+          thumb = document.querySelector(".rail .thumb"), clause = document.getElementById("clause"), note = document.getElementById("note"), stops = document.querySelectorAll(".stops button");
+      function setStage(i) {
+        frags.forEach(function (f, k) { f.classList.toggle("on", k === i); });
+        var f = frags[i]; clause.textContent = f.dataset.clause; note.textContent = f.dataset.note; rng.value = i; rng.setAttribute("aria-valuetext", f.dataset.clause);
+        var p = i / 3 * 100; fill.style.width = p + "%"; thumb.style.left = p + "%";
+        stops.forEach(function (b, k) { b.setAttribute("aria-current", k === i ? "true" : "false"); });
+      }
+      rng.addEventListener("input", function () { setStage(+rng.value); });
+      stops.forEach(function (b) { b.addEventListener("click", function () { setStage(+b.dataset.i); }); });
+      setStage(0);
+
+      var items2 = [
+        {fact: "Бот ведёт к ответу вопросами и не решает за ребёнка.", bg: "var(--primary)", msg: "Давайте разберёмся вместе. Что известно из условия?"},
+        {fact: "Объяснит правило и подберёт простые примеры.", bg: "var(--accent)", msg: "Правило запомнить легче на примере. Давайте найдём слова, где оно работает."},
+        {fact: "Перескажет сложный параграф понятными словами.", bg: "var(--surface-2)", msg: "Главная мысль абзаца простыми словами: давайте выделим её вместе."},
+        {fact: "Ответит на детское «почему?» коротко и понятно.", bg: "var(--primary-soft)", msg: "Хороший вопрос! Давайте подумаем, что мы уже знаем об этом."}
+      ];
+      var names2 = document.querySelectorAll(".names button"), pics = document.querySelectorAll("#disc img"), disc = document.getElementById("disc"),
+          fact = document.getElementById("fact"), dm = document.getElementById("discmsg");
+      function pick(i) {
+        names2.forEach(function (b, k) { b.setAttribute("aria-pressed", k === i ? "true" : "false"); });
+        
+        disc.style.background = items2[i].bg; fact.textContent = items2[i].fact;
+        dm.innerHTML = '<div class="bub"><b>Бот</b>' + items2[i].msg + '</div>';
+      }
+      names2.forEach(function (b) { b.addEventListener("click", function () { pick(+b.dataset.i); }); });
+
+      var cards = document.querySelectorAll("details.card");
+      cards.forEach(function (c) { c.addEventListener("toggle", function () { if (c.open) cards.forEach(function (o) { if (o !== c) o.open = false; }); }); });
+    })();
+  </script>
 </body>
 </html>
